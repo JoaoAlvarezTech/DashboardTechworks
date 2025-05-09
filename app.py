@@ -6,41 +6,35 @@ import os
 import csv
 from datetime import datetime, timedelta
 
-# Configurar a página
 st.set_page_config(page_title="Dashboard de Transações - Comparação de Clientes", layout="wide")
 
-# Título do dashboard
 st.title("📊 Dashboard de Transações: Comparação de Clientes e Dias")
 
-# Carregar todos os arquivos dados_*.csv
 data_path = "data"
 csv_files = glob.glob(os.path.join(data_path, "dados_*.csv"))
 
-# Lista para armazenar os DataFrames
 all_dfs = []
 
-# Processar cada arquivo CSV com leitura manual
 for file in csv_files:
     try:
         client_name = os.path.basename(file).replace("dados_", "").replace(".csv", "")
         data = []
         with open(file, newline='', encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
-            header = next(reader)  # Pular o cabeçalho
+            header = next(reader) 
             for row in reader:
-                if len(row) == 5:  # Garantir que a linha tenha os 5 campos
+                if len(row) == 5: 
                     date, timezone, operation, volume, amount = row
-                    # Converter Amount para float manualmente
+                   
                     try:
-                        amount = float(amount.replace(',', ''))  # Remover vírgulas se houver
+                        amount = float(amount.replace(',', ''))  
                     except ValueError:
-                        amount = float('nan')  # Se não puder converter, usar NaN
+                        amount = float('nan') 
                     data.append([date, timezone, operation, float(volume), amount])
         
-        # Criar DataFrame a partir dos dados processados
         df = pd.DataFrame(data, columns=["Date", "Timezone", "Operation", "Volume", "Amount"])
         
-        # Converter a coluna Date
+        
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce", format="%Y-%m-%d")
         df["Client"] = client_name
         
@@ -51,11 +45,11 @@ for file in csv_files:
     except Exception as e:
         st.error(f"Erro ao carregar {file}: {str(e)}")
 
-# Combinar todos os DataFrames
+
 if all_dfs:
     combined_df = pd.concat(all_dfs, ignore_index=True)
     
-    # Calcular o Total por dia e cliente
+    
     total_df = combined_df.groupby(["Client", "Date"]).agg({
         "Volume": "sum",
         "Amount": "sum"
@@ -64,7 +58,7 @@ if all_dfs:
     
     combined_df = pd.concat([combined_df, total_df], ignore_index=True)
     
-    # Filtros na sidebar
+   
     st.sidebar.header("🔍 Filtros")
     st.sidebar.markdown("**Selecione os parâmetros abaixo para personalizar a visualização:**")
     
@@ -100,7 +94,7 @@ if all_dfs:
         (combined_df["Date"] <= end_date)
     ]
     
-    # Resumo Geral
+   
     st.markdown("### Resumo Geral")
     col1, col2 = st.columns(2)
     total_volume = filtered_df[filtered_df["Operation"] == "Total"]["Volume"].sum()
@@ -108,7 +102,7 @@ if all_dfs:
     col1.metric("Volume Total", f"{total_volume:,.2f}")
     col2.metric("Montante Total", f"R${total_amount:,.2f}" if pd.notnull(total_amount) else "N/A")
     
-    # Tabela de Transações Detalhada
+   
     st.markdown("---")
     st.subheader("Tabela de Transações Detalhada")
     filtered_df_display = filtered_df[["Client", "Date", "Operation", "Volume", "Amount"]].copy()
@@ -129,8 +123,7 @@ if all_dfs:
         hide_index=True
     )
     
-    # Gráfico 1: Comparação de Volume entre clientes (barras)
-    st.markdown("---")
+   
     st.subheader("Comparação de Volume Total entre Clientes")
     volume_by_client = filtered_df[filtered_df["Operation"] == "Total"].groupby("Client")["Volume"].sum().reset_index()
     fig1 = px.bar(
@@ -154,7 +147,7 @@ if all_dfs:
     )
     st.plotly_chart(fig1, use_container_width=True)
     
-    # Gráfico 2: Evolução do Volume ao longo do tempo por cliente (linhas)
+    
     st.markdown("---")
     st.subheader("Evolução do Volume ao Longo do Tempo por Cliente")
     volume_over_time = filtered_df[filtered_df["Operation"] == "Total"]
@@ -179,7 +172,7 @@ if all_dfs:
     )
     st.plotly_chart(fig2, use_container_width=True)
     
-    # Gráfico 3: Volume por Operação e Cliente (barras empilhadas)
+    
     st.markdown("---")
     st.subheader("Volume por Operação e Cliente")
     volume_by_operation = filtered_df[filtered_df["Operation"] != "Total"]
